@@ -1,0 +1,9 @@
+customer_id,tenure_months,sla_met_pct,repeat_complaints,escalations,complaint_severity,sentiment_score,nps_change,csat_pct,market_risk_index,app_logins_30d,tariff_comparisons,direct_debit_cancelled,quote_requests,payment_days_late
+C-1001,48,95,0,0,1,0.80,2,90,15,12,0,0,0,0
+C-1002,18,40,5,2,5,-0.70,-22,38,82,2,4,1,2,21
+C-1003,36,72,2,0,3,-0.20,-8,66,55,5,2,0,1,0
+C-1004,84,98,0,0,1,0.65,3,92,22,16,0,0,0,0
+C-1005,9,58,3,1,4,-0.45,-12,52,68,3,3,0,1,7
+C-1006,60,88,1,0,2,0.10,-2,78,45,8,1,0,0,0
+C-1007,27,65,2,1,4,-0.55,-15,49,75,1,2,1,1,18
+C-1008,120,94,0,0,1,0.70,1,88,20,11,0,0,0,0

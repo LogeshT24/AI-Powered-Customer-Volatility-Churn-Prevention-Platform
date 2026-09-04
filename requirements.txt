@@ -18,6 +18,13 @@ aiofiles>=24.1.0
 # For asynchronous HTTP requests
 aiohttp>=3.13.0,<4.0
 
+# Energy Retention Command Centre demo API and local policy retrieval
+Flask>=3.1.0,<4.0
+Flask-Cors>=5.0.0,<6.0.0
+SQLAlchemy>=2.0.0,<3.0.0
+requests>=2.32.0,<3.0.0
+chromadb>=1.0.0,<2.0.0
+
 # For IDNA/UTS#46 hostname canonicalization in SafeFetch domain-policy checks.
 # Already required transitively by yarl (via aiohttp) and neuro-san; declared here
 # because SafeFetch imports it directly and relies on yarl-matching UTS#46 behavior.
