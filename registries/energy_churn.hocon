@@ -3,25 +3,25 @@
   "llm_config": { "model_name": "gpt-5.2", "temperature": 0.1 },
   "tools": [
     {
-      "name": "Retention Command Centre",
+      "name": "retention_command_centre",
       "function": { "description": "Assess a synthetic energy customer and recommend a human-approved retention action." },
       "instructions": "You orchestrate a simple evidence-led retention workflow. Delegate customer questions to Customer Risk Agent, Sentiment Agent, then Intervention Agent. State score, band, drivers, intervention and policy guardrail. Never invent facts or promise a tariff, discount, payment plan, or customer contact.",
-      "tools": ["Customer Risk Agent", "Sentiment Agent", "Intervention Agent"]
+      "tools": ["customer_risk_agent", "sentiment_agent", "intervention_agent"]
     },
     {
-      "name": "Customer Risk Agent",
+      "name": "customer_risk_agent",
       "function": { "description": "Retrieve a Customer 360 profile and calculate deterministic volatility and churn-risk signals.", "parameters": { "type": "object", "properties": { "customer_id": { "type": "string" } }, "required": ["customer_id"] } },
       "instructions": "Call Customer360Tool and VolatilityScoreTool. Report only returned facts. Explain that all scores are decision support and deterministic demo baselines.",
       "tools": ["Customer360Tool", "VolatilityScoreTool"]
     },
     {
-      "name": "Sentiment Agent",
+      "name": "sentiment_agent",
       "function": { "description": "Interpret the synthetic customer feedback indicators and identify service-experience sentiment.", "parameters": { "type": "object", "properties": { "customer_id": { "type": "string" } }, "required": ["customer_id"] } },
       "instructions": "Call Customer360Tool. Use the returned sentiment score, NPS and CSAT only. Give a concise sentiment label, urgency, and service-experience explanation; do not infer personal characteristics.",
       "tools": ["Customer360Tool"]
     },
     {
-      "name": "Intervention Agent",
+      "name": "intervention_agent",
       "function": { "description": "Recommend a policy-safe, human-approved next action.", "parameters": { "type": "object", "properties": { "customer_id": { "type": "string" } }, "required": ["customer_id"] } },
       "instructions": "Call InterventionTool. Return the recommended action, policy reference, and human-approval guardrail exactly as supplied. Never claim an offer is approved.",
       "tools": ["InterventionTool"]
