@@ -4,21 +4,17 @@ An explainable, service-first churn early-warning prototype for the Centrica hac
 
 ## What is in this prototype
 
-- `registries/energy_churn.hocon`: a six-specialist Neuro SAN agent network plus an executive Dashboard Agent.
+- `registries/energy_churn.hocon`: a Neuro SAN network with a retention coordinator and three specialist agents.
 - `coded_tools/energy_churn/energy_tools.py`: deterministic scoring, intervention policy and portfolio aggregation. These tools keep calculations out of the LLM.
 - `data/energy_churn_demo.csv`: eight entirely synthetic, pseudonymised demo customers. It must be replaced by governed CRM, billing, complaints, smart-meter and contact-centre views before any production use.
 
 ## Architecture
 
 ```text
-Retention Command Centre
-  ├── Customer Intelligence ── Customer360Tool
-  ├── Complaint Resolution ── VolatilityScoreTool
-  ├── Sentiment ──────────── Customer360Tool
-  ├── Market Intelligence ── Customer360Tool
-  ├── Churn Prediction ───── VolatilityScoreTool
-  ├── Intervention ───────── InterventionTool
-  └── Dashboard ──────────── PortfolioDashboardTool
+retention_command_centre
+  ├── customer_risk_agent ── Customer360Tool, VolatilityScoreTool
+  ├── sentiment_agent ────── Customer360Tool
+  └── intervention_agent ─── InterventionTool
 ```
 
 The score is transparent and bounded to 0–100:
@@ -27,24 +23,81 @@ The score is transparent and bounded to 0–100:
 
 Bands: Stable (<35), Watch (35–54), High (55–74), Critical (75+). The current churn probability is deliberately a deterministic **demo baseline**, not a trained model or an automated decision.
 
-## Launch in Neuro SAN Studio
+## Run the project
 
-1. Ensure this network is included by your `registries/manifest.hocon` (use the existing manifest convention; do not replace other entries).
-2. Set `AGENT_TOOL_PATH` to this project’s `coded_tools` directory and configure your LLM key in `.env`.
-3. Run `ns run` from the project folder.
-4. Open the nsflow UI at `http://localhost:4173`, select **Retention Command Centre**, then test the prompts below.
+### One-time setup (PowerShell)
+
+Run these commands from the repository root:
+
+```powershell
+Copy-Item .env.example .env
+# Edit .env and replace YOUR_OPENAI_API_KEY with a valid key before using the Neuro SAN agent.
+
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+Push-Location apps\energy_churn_dashboard
+npm install
+Pop-Location
+```
+
+The network is already registered as `"energy_churn.hocon": true` in
+`registries/manifest.hocon`. Do not replace the manifest: add any future networks alongside
+the existing entries.
+
+### Terminal 1 — Neuro SAN Studio and the agent
+
+```powershell
+cd C:\workspace\neuro-san-studio
+.\.venv\Scripts\ns.exe run
+```
+
+Wait until the server finishes loading (the full example manifest can take about two minutes),
+then open [http://localhost:4173](http://localhost:4173). In the left **Available Agents**
+panel, click **CONNECT** for `localhost:8080`, search for `energy_churn`, and drag it to the
+canvas. The internal agents are displayed inside that network; the left panel lists the
+top-level network only.
+
+To run only the API that serves the Neuro SAN agent, without starting the Studio UI:
+
+```powershell
+.\.venv\Scripts\ns.exe run --server-only
+```
+
+### Terminal 2 — Energy Churn dashboard API
+
+```powershell
+cd C:\workspace\neuro-san-studio
+.\.venv\Scripts\python.exe -m apps.energy_churn_api.app
+```
+
+The Flask API runs at [http://127.0.0.1:5000](http://127.0.0.1:5000). It uses only the bundled
+synthetic dataset by default, so the dashboard works without an LLM key.
+
+### Terminal 3 — Energy Churn React dashboard
+
+```powershell
+cd C:\workspace\neuro-san-studio\apps\energy_churn_dashboard
+npm run dev
+```
+
+Open the Vite URL shown in the terminal, normally [http://127.0.0.1:5173](http://127.0.0.1:5173).
+
+### Quick health checks
+
+```powershell
+# Lists networks exposed by the running Neuro SAN server; look for energy_churn.
+Invoke-RestMethod http://localhost:8080/api/v1/list
+
+# Returns the Energy Churn dashboard summary.
+Invoke-RestMethod http://127.0.0.1:5000/api/dashboard
+```
 
 The implemented demo has two complementary surfaces: Neuro SAN nsflow shows the three-agent
 orchestration and chat flow, while a local React dashboard presents the command-centre portfolio.
 Flask owns the local SQLite API; no external CRM, MCP server, cloud database, or separate
 orchestration framework is required.
-
-## Local dashboard launch
-
-1. Install Python dependencies from `requirements.txt`.
-2. Start the Flask API: `python -m apps.energy_churn_api.app`.
-3. In `apps/energy_churn_dashboard`, run `npm install` once and `npm run dev`.
-4. Open the Vite URL, normally `http://127.0.0.1:5173`.
 
 The dashboard defaults to deterministic policy citations for a fast offline demo. To enable the
 local Chroma vector store, set `OPENAI_API_KEY`, `OPENAI_EMBEDDING_MODEL`, and
