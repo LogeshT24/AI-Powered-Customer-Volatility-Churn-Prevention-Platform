@@ -1,6 +1,7 @@
 {
   # Hackathon network: numeric decisions come from coded tools; LLMs explain evidence only.
-  "llm_config": { "model_name": "gpt-5.2", "temperature": 0.1 },
+  "llm_config": { "model_name": "gemini-3-flash", "temperature": 1.0 },
+  #"llm_config": { "model_name": "gpt-5.2", "temperature": 0.1 },
   "tools": [
     {
       "name": "retention_command_centre",

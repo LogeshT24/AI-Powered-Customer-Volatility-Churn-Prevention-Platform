@@ -31,7 +31,7 @@ Run these commands from the repository root:
 
 ```powershell
 Copy-Item .env.example .env
-# Edit .env and replace YOUR_OPENAI_API_KEY with a valid key before using the Neuro SAN agent.
+# Edit .env and replace YOUR_GOOGLE_GEMINI_API_KEY with a valid Gemini key before using the Neuro SAN agent.
 
 py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
@@ -73,7 +73,8 @@ cd C:\workspace\neuro-san-studio
 ```
 
 The Flask API runs at [http://127.0.0.1:5000](http://127.0.0.1:5000). It uses only the bundled
-synthetic dataset by default, so the dashboard works without an LLM key.
+synthetic dataset by default, so the dashboard works without an LLM key. The Neuro SAN agent
+uses `GOOGLE_API_KEY` with Gemini.
 
 ### Terminal 3 — Energy Churn React dashboard
 
