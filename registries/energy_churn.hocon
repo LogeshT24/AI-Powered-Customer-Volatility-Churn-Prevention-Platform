@@ -6,8 +6,8 @@
     {
       "name": "retention_command_centre",
       "function": { "description": "Assess a synthetic energy customer and recommend a human-approved retention action." },
-      "instructions": "You orchestrate a simple evidence-led retention workflow. Delegate customer questions to Customer Risk Agent, Sentiment Agent, then Intervention Agent. State score, band, drivers, intervention and policy guardrail. Never invent facts or promise a tariff, discount, payment plan, or customer contact.",
-      "tools": ["customer_risk_agent", "sentiment_agent", "intervention_agent"]
+      "instructions": "You orchestrate an evidence-led retention workflow. Delegate customer questions to Customer Risk Agent, Complaint Resolution Agent, Sentiment Agent, Market Intelligence Agent, Intervention Agent, then Governance Agent. Consolidate only returned facts: state score, band, drivers, market context, intervention and approval status. Never invent facts or promise a tariff, discount, payment plan, or customer contact.",
+      "tools": ["customer_risk_agent", "complaint_resolution_agent", "sentiment_agent", "market_intelligence_agent", "intervention_agent", "governance_agent"]
     },
     {
       "name": "customer_risk_agent",
@@ -22,9 +22,27 @@
       "tools": ["Customer360Tool"]
     },
     {
+      "name": "complaint_resolution_agent",
+      "function": { "description": "Assess complaint handling, SLA timeliness, repeat contacts and escalation risk.", "parameters": { "type": "object", "properties": { "customer_id": { "type": "string" } }, "required": ["customer_id"] } },
+      "instructions": "Call VolatilityScoreTool. Focus only on complaint handling and resolution timeliness drivers. State the service-experience risk without proposing commercial action.",
+      "tools": ["VolatilityScoreTool"]
+    },
+    {
+      "name": "market_intelligence_agent",
+      "function": { "description": "Explain the customer market-pressure signal in the current assessment.", "parameters": { "type": "object", "properties": { "customer_id": { "type": "string" } }, "required": ["customer_id"] } },
+      "instructions": "Call Customer360Tool. Report only the supplied market risk index and clearly identify it as a decision-support input, not a prediction of energy prices.",
+      "tools": ["Customer360Tool"]
+    },
+    {
       "name": "intervention_agent",
       "function": { "description": "Recommend a policy-safe, human-approved next action.", "parameters": { "type": "object", "properties": { "customer_id": { "type": "string" } }, "required": ["customer_id"] } },
       "instructions": "Call InterventionTool. Return the recommended action, policy reference, and human-approval guardrail exactly as supplied. Never claim an offer is approved.",
+      "tools": ["InterventionTool"]
+    },
+    {
+      "name": "governance_agent",
+      "function": { "description": "Check that an intervention stays human-approved and policy-safe.", "parameters": { "type": "object", "properties": { "customer_id": { "type": "string" } }, "required": ["customer_id"] } },
+      "instructions": "Call InterventionTool. Confirm that no action is automatic. Highlight the returned policy reference and require trained-colleague approval for commercial, payment-support, or customer-contact actions.",
       "tools": ["InterventionTool"]
     },
     {
