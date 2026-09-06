@@ -85,6 +85,14 @@ npm run dev
 
 Open the Vite URL shown in the terminal, normally [http://127.0.0.1:5173](http://127.0.0.1:5173).
 
+### Dashboard-to-agent chat
+
+With both Terminal 1 (Neuro SAN) and Terminal 2 (Flask) running, select **Agent workspace**
+in the dashboard and use **Ask Energy Agent**. The dashboard sends the question to Flask, which
+forwards it to `http://127.0.0.1:8080/api/v1/energy_churn/streaming_chat` by default. Set
+`NEURO_SAN_BASE_URL` in `.env` only when the Neuro SAN server uses a different host or port;
+`NEURO_SAN_CHAT_URL` is available as a full-endpoint override.
+
 ### Quick health checks
 
 ```powershell

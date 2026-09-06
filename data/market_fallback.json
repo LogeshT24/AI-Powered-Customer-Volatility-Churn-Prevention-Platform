@@ -2,7 +2,7 @@
   "market_risk_index": 48,
   "price_eur_mwh": 92.4,
   "price_change_pct": 6.8,
-  "source": "Packaged hackathon fallback snapshot",
+  "source": "Packaged fallback snapshot",
   "source_mode": "fallback",
   "retrieved_at": "2026-09-04T09:00:00Z"
 }

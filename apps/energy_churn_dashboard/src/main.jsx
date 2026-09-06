@@ -33,7 +33,7 @@ function App() {
     <aside><div className="brand"><span>◈</span> ENERGY PULSE<br/><small>RETENTION INTELLIGENCE</small></div>
       <button className={view === "command" ? "active" : ""} onClick={() => setView("command")}>▦ Command centre</button>
       <button className={view === "agents" ? "active" : ""} onClick={() => setView("agents")}>◌ Agent workspace</button>
-      <div className="aside-footer">DEMO ENVIRONMENT<br/><span>● SYNTHETIC DATA ONLY</span></div>
+      <div className="aside-footer"><br/><span>● SYNTHETIC DATA ONLY</span></div>
     </aside>
     <section className="content">
       <header><div><p className="eyebrow">CUSTOMER RETENTION / UK ENERGY</p><h1>{view === "command" ? "Retention command centre" : "Agent workspace"}</h1></div><button className="refresh" onClick={load}>↻ Refresh intelligence</button></header>
@@ -51,6 +51,32 @@ function App() {
 }
 
 function Metric({label, value, alert}) { return <section className={`metric ${alert ? "metric-alert" : ""}`}><p>{label}</p><strong>{value}</strong><small>Current demo portfolio</small></section>; }
-function AgentWorkspace({customers, openCustomer}) { const [id, setId] = useState("C-1002"); const current = customers.find(c => c.customer_id === id); const agents = [["01", "Customer Risk Agent", "Customer 360 + deterministic volatility score"], ["02", "Complaint Resolution Agent", "SLA, repeat complaints and escalation health"], ["03", "Sentiment Agent", "Feedback, NPS and CSAT interpretation"], ["04", "Market Intelligence Agent", "Live market-pressure context and source state"], ["05", "Intervention Agent", "Policy-grounded next-best human action"], ["06", "Governance Agent", "Approval, policy and customer-safety checks"]]; return <div className="agent-grid"><section className="panel orchestration"><p className="eyebrow">NEURO SAN ORCHESTRATION</p><h2>Multi-agent retention workflow</h2><div className="flow-grid">{agents.map(([number, name, description]) => <article key={number}><span>{number}</span><b>{name}</b><small>{description}</small></article>)}</div></section><section className="panel prompt"><p className="eyebrow">ASSESSMENT CONSOLE</p><h2>Assess a customer</h2><select value={id} onChange={e => setId(e.target.value)}>{customers.map(c => <option key={c.customer_id}>{c.customer_id}</option>)}</select><button className="assess" onClick={() => openCustomer(id)}>Run assessment →</button>{current && <div className="result"><span className={`pill ${tone(current.risk_band)}`}>{current.risk_band}</span><b>{current.volatility_score}/100 volatility</b><p>{current.intervention.recommended_action}</p><small>Chat endpoint becomes available when the local Neuro SAN server is running.</small></div>}</section></div>; }
+function AgentWorkspace({customers, openCustomer}) {
+  const [id, setId] = useState("C-1002");
+  const [question, setQuestion] = useState("Give me details of C-1002");
+  const [answer, setAnswer] = useState("");
+  const [chatError, setChatError] = useState("");
+  const [fallbackReason, setFallbackReason] = useState("");
+  const [asking, setAsking] = useState(false);
+  const current = customers.find(c => c.customer_id === id);
+  const agents = [["01", "Customer Risk Agent", "Customer 360 + deterministic volatility score"], ["02", "Complaint Resolution Agent", "SLA, repeat complaints and escalation health"], ["03", "Sentiment Agent", "Feedback, NPS and CSAT interpretation"], ["04", "Market Intelligence Agent", "Live market-pressure context and source state"], ["05", "Intervention Agent", "Policy-grounded next-best human action"], ["06", "Governance Agent", "Approval, policy and customer-safety checks"]];
+  const selectCustomer = (customerId) => { setId(customerId); setQuestion(`Give me details of ${customerId}`); };
+  const localFallback = () => {
+    if (!current) return "The local dashboard data is unavailable. Refresh the dashboard and try again.";
+    const [driver, driverScore] = Object.entries(current.drivers).sort((a, b) => b[1] - a[1])[0];
+    return `Assessment for ${current.customer_id}: ${current.risk_band} risk, ${current.volatility_score}/100 volatility and ${Math.round(current.baseline_churn_probability * 100)}% baseline churn probability. Primary driver: ${driver.replaceAll("_", " ")} (${driverScore}/100). Recommended human-approved action: ${current.intervention.recommended_action}.`;
+  };
+  const askAgent = async (event) => {
+    event.preventDefault(); setAsking(true); setAnswer(""); setChatError(""); setFallbackReason("");
+    try {
+      const response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: question, customer_id: id }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "The Energy Churn agent could not answer.");
+      setAnswer(payload.answer);
+      if (payload.fallback) setFallbackReason(payload.fallback_reason);
+    } catch (error) { setAnswer(localFallback()); setFallbackReason("The dashboard could not reach the local agent service."); setChatError(error.message); } finally { setAsking(false); }
+  };
+  return <div className="agent-grid"><section className="panel orchestration"><p className="eyebrow">NEURO SAN ORCHESTRATION</p><h2>Multi-agent retention workflow</h2><div className="flow-grid">{agents.map(([number, name, description]) => <article key={number}><span>{number}</span><b>{name}</b><small>{description}</small></article>)}</div></section><section className="panel prompt"><p className="eyebrow">ASSESSMENT CONSOLE</p><h2>Assess a customer</h2><select value={id} onChange={event => selectCustomer(event.target.value)}>{customers.map(c => <option key={c.customer_id}>{c.customer_id}</option>)}</select><button className="assess" onClick={() => openCustomer(id)}>View deterministic assessment →</button>{current && <div className="result"><span className={`pill ${tone(current.risk_band)}`}>{current.risk_band}</span><b>{current.volatility_score}/100 volatility</b><p>{current.intervention.recommended_action}</p></div>}<form className="agent-chat" onSubmit={askAgent}><p className="eyebrow">ASK ENERGY AGENT</p><label htmlFor="agent-question">Question for the local Neuro SAN network</label><textarea id="agent-question" value={question} onChange={event => setQuestion(event.target.value)} required/><button className="assess" disabled={asking}>{asking ? "Asking agent…" : "Ask Energy Agent →"}</button>{answer && <div className="agent-answer"><b>{fallbackReason ? "Deterministic assessment" : "Energy agent"}</b><p>{answer}</p></div>}{fallbackReason && <div className="agent-fallback">AI unavailable: {fallbackReason} Showing verified local dashboard data instead.</div>}{chatError && <div className="agent-error">Connection detail: {chatError}</div>}</form></section></div>;
+}
 function CustomerDrawer({customer, close, updateStatus}) { return <div className="drawer-backdrop" onClick={close}><section className="drawer" onClick={e => e.stopPropagation()}><button className="close" onClick={close}>×</button><p className="eyebrow">CUSTOMER RISK BRIEF / {customer.customer_id}</p><div className="drawer-title"><h2>{customer.risk_band} retention risk</h2><span className={`score ${tone(customer.risk_band)}`}>{customer.volatility_score}</span></div><p className="formula">Volatility score · deterministic decision support</p><div className="driver-list">{Object.entries(customer.drivers).map(([name, value]) => <div key={name}><label>{name.replaceAll("_", " ")}<b>{value}</b></label><i><em style={{width: `${value}%`}}/></i></div>)}</div><section className="recommend"><p className="eyebrow">RECOMMENDED NEXT ACTION</p><h3>{customer.intervention.recommended_action}</h3><p>{customer.intervention.guardrail}</p><div className="citations">{customer.intervention.policy_citations.map(policy => <span key={policy.document}>⌁ {policy.document} · {policy.version}</span>)}</div></section><section className="sentiment"><b>Sentiment: {customer.sentiment.label}</b><span>Urgency: {customer.sentiment.urgency}</span></section><div className="actions"><button onClick={() => updateStatus("approved")}>Mark human-approved</button><button className="secondary" onClick={() => updateStatus("declined")}>Decline</button></div></section></div>; }
 createRoot(document.getElementById("root")).render(<App/>);

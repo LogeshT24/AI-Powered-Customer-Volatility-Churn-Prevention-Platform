@@ -13,6 +13,37 @@ from apps.energy_churn_api.database import Assessment, Customer, Intervention, M
 from apps.energy_churn_api.services import calculate_score, customer_record, intervention, live_market, policy_citations, sentiment_summary
 
 
+def _neuro_san_chat_url() -> str:
+    """Return the local Energy Churn endpoint, unless explicitly overridden."""
+    configured_url = os.getenv("NEURO_SAN_CHAT_URL", "").strip()
+    if configured_url:
+        return configured_url
+    base_url = os.getenv("NEURO_SAN_BASE_URL", "http://127.0.0.1:8080").rstrip("/")
+    return f"{base_url}/api/v1/energy_churn/streaming_chat"
+
+
+def _response_text(value: object) -> str:
+    """Extract a displayable answer from Neuro SAN's nested chat response."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "\n".join(part for item in value if (part := _response_text(item)))
+    if isinstance(value, dict):
+        text = value.get("text")
+        if isinstance(text, str):
+            return text
+        for key in ("message", "messages", "response", "content", "error"):
+            if key in value and (result := _response_text(value[key])):
+                return result
+    return ""
+
+
+def _is_agent_error(answer: str) -> bool:
+    """Detect provider failures returned as a successful streaming-chat response."""
+    error_markers = ("agent stopped due to exception", "resource_exhausted", "quota", "api key", "connection error")
+    return any(marker in answer.lower() for marker in error_markers)
+
+
 def create_app() -> Flask:
     """Create a configured Flask app."""
     seed_database()
@@ -83,15 +114,53 @@ def create_app() -> Flask:
 
     @app.post("/api/chat")
     def chat():
-        """Proxy chat only when a local Neuro SAN server is running."""
-        endpoint = os.getenv("NEURO_SAN_CHAT_URL", "")
-        if not endpoint:
-            return jsonify({"error": "Start Neuro SAN and set NEURO_SAN_CHAT_URL to enable agent chat."}), 503
+        """Send a dashboard question to the local Energy Churn agent network."""
+        payload = request.get_json(silent=True) or {}
+        message = str(payload.get("message", "")).strip()
+        if not message:
+            return jsonify({"error": "Enter a question for the Energy Churn agent."}), 400
+
+        def fallback(reason: str):
+            customer_id = str(payload.get("customer_id", "")).strip()
+            with get_session() as session:
+                customer = session.get(Customer, customer_id)
+                if not customer:
+                    return None
+                assessment = assess(customer)
+            primary_driver = max(assessment["drivers"], key=assessment["drivers"].get).replace("_", " ")
+            answer = (
+                f"Fallback assessment for {customer_id}: {assessment['risk_band']} risk, "
+                f"{assessment['volatility_score']}/100 volatility and "
+                f"{assessment['baseline_churn_probability']:.0%} baseline churn probability. "
+                f"Primary driver: {primary_driver} ({assessment['drivers'][primary_driver.replace(' ', '_')]}/100). "
+                f"Recommended human-approved action: {assessment['intervention']['recommended_action']}."
+            )
+            return jsonify({"answer": answer, "fallback": True, "fallback_reason": reason})
+
         try:
-            response = requests.post(endpoint, json=request.get_json(silent=True) or {}, timeout=30)
-            return jsonify(response.json()), response.status_code
-        except requests.RequestException:
-            return jsonify({"error": "Neuro SAN is unavailable. Dashboard data remains available."}), 503
+            response = requests.post(
+                _neuro_san_chat_url(),
+                json={"user_message": {"text": message}},
+                timeout=90,
+            )
+            response_payload = response.json()
+            if not response.ok:
+                fallback_response = fallback("The AI provider was unavailable.")
+                if fallback_response is not None:
+                    return fallback_response
+                return jsonify({"error": _response_text(response_payload) or "Neuro SAN could not process the request."}), 502
+            answer = _response_text(response_payload)
+            if not answer or _is_agent_error(answer):
+                fallback_response = fallback("The AI provider could not complete the request.")
+                if fallback_response is not None:
+                    return fallback_response
+                return jsonify({"error": "Neuro SAN returned no readable agent response."}), 502
+            return jsonify({"answer": answer})
+        except (requests.RequestException, ValueError):
+            fallback_response = fallback("Neuro SAN could not be reached.")
+            if fallback_response is not None:
+                return fallback_response
+            return jsonify({"error": "Neuro SAN is unavailable. Start `ns run` and try again."}), 503
 
     return app
 
