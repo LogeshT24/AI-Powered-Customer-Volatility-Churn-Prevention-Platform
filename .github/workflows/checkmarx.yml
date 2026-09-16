@@ -2,14 +2,14 @@
 name: Checkmarx One
 
 permissions:
-    contents: read
-    security-events: write
+  contents: read
+  security-events: write
 
 on:
-    schedule:
-        # M-F at 3:00 am UTC (offset from neuro-san and neuro-san-ui)
-        - cron: "0 3 * * 1-5"
-    workflow_dispatch:
+  # schedule:
+  #   - cron: "0 3 * * 1-5"
+  push:
+  workflow_dispatch:
 
 jobs:
     checkmarx-scan:
